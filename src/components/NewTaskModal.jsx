@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { TEAM_MEMBERS } from '../lib/constants'
+import AssigneePicker from './AssigneePicker'
 
 function buildDeadline(date, hour, min) {
   if (!date) return null
@@ -31,7 +32,13 @@ function TimeInputs({ hour, min, onHour, onMin, disabled }) {
   )
 }
 
-const emptySubtask = () => ({ title: '', assignee: '', deadlineDate: '', deadlineHour: '09', deadlineMin: '00' })
+const emptySubtask = () => ({
+  title: '',
+  assignees: [],
+  deadlineDate: '',
+  deadlineHour: '09',
+  deadlineMin: '00',
+})
 
 export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
   const [form, setForm] = useState({
@@ -87,7 +94,7 @@ export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
         validSubtasks.map((s) => ({
           task_id: task.id,
           title: s.title.trim(),
-          assignee: s.assignee || null,
+          assignee: s.assignees.length > 0 ? s.assignees : null,
           deadline: buildDeadline(s.deadlineDate, s.deadlineHour, s.deadlineMin),
         }))
       )
@@ -161,7 +168,7 @@ export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Подзадачи</label>
             <div className="space-y-3">
               {subtasks.map((s, idx) => (
-                <div key={idx} className="border border-slate-200 rounded-xl p-3 space-y-2">
+                <div key={idx} className="border border-slate-200 rounded-xl p-3 space-y-2.5">
                   <div className="flex gap-2">
                     <input
                       type="text" value={s.title}
@@ -173,32 +180,26 @@ export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
                       <button type="button" onClick={() => removeSubtaskRow(idx)} className="text-slate-300 hover:text-red-400 px-2">✕</button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">Ответственный</label>
-                      <select
-                        value={s.assignee}
-                        onChange={(e) => setSubtaskField(idx, 'assignee', e.target.value)}
-                        className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400 bg-white"
-                      >
-                        <option value="">— не выбран</option>
-                        {TEAM_MEMBERS.map((m) => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">Дедлайн</label>
-                      <input
-                        type="date" value={s.deadlineDate}
-                        onChange={(e) => setSubtaskField(idx, 'deadlineDate', e.target.value)}
-                        className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
-                      />
-                      <TimeInputs
-                        hour={s.deadlineHour} min={s.deadlineMin}
-                        onHour={(v) => setSubtaskField(idx, 'deadlineHour', v)}
-                        onMin={(v) => setSubtaskField(idx, 'deadlineMin', v)}
-                        disabled={!s.deadlineDate}
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1.5">Ответственные</label>
+                    <AssigneePicker
+                      selected={s.assignees}
+                      onChange={(v) => setSubtaskField(idx, 'assignees', v)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Дедлайн</label>
+                    <input
+                      type="date" value={s.deadlineDate}
+                      onChange={(e) => setSubtaskField(idx, 'deadlineDate', e.target.value)}
+                      className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
+                    />
+                    <TimeInputs
+                      hour={s.deadlineHour} min={s.deadlineMin}
+                      onHour={(v) => setSubtaskField(idx, 'deadlineHour', v)}
+                      onMin={(v) => setSubtaskField(idx, 'deadlineMin', v)}
+                      disabled={!s.deadlineDate}
+                    />
                   </div>
                 </div>
               ))}

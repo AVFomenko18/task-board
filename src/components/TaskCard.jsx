@@ -54,9 +54,9 @@ export default function TaskCard({ task, subtasks, onClick, onToggleSubtask }) {
                   {subtask.title}
                 </span>
                 <div className="flex gap-1.5 mt-0.5 flex-wrap">
-                  {subtask.assignee && (
-                    <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">{subtask.assignee}</span>
-                  )}
+                  {(Array.isArray(subtask.assignee) ? subtask.assignee : subtask.assignee ? [subtask.assignee] : []).map((a) => (
+                    <span key={a} className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">{a}</span>
+                  ))}
                   {subtask.deadline && (
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${new Date(subtask.deadline) < new Date() && !subtask.is_done ? 'bg-red-100 text-red-500' : 'bg-amber-50 text-amber-600'}`}>
                       {formatDeadline(subtask.deadline)}
