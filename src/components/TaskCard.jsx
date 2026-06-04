@@ -9,10 +9,19 @@ function formatDeadline(dateStr) {
   return `${date}, ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
 }
 
+function deadlineColors(dateStr) {
+  if (!dateStr) return null
+  const diff = (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24)
+  if (diff < 0)  return { dot: 'bg-red-500',    badge: 'bg-red-100 text-red-600' }
+  if (diff < 1)  return { dot: 'bg-red-500',    badge: 'bg-red-100 text-red-600' }
+  if (diff <= 3) return { dot: 'bg-yellow-400', badge: 'bg-yellow-100 text-yellow-700' }
+  return           { dot: 'bg-green-500',   badge: 'bg-green-100 text-green-700' }
+}
+
 export default function TaskCard({ task, subtasks, onClick, onToggleSubtask }) {
   const done = subtasks.filter((s) => s.is_done).length
   const total = subtasks.length
-  const isOverdue = task.deadline && new Date(task.deadline) < new Date()
+  const dlColors = deadlineColors(task.deadline)
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 px-4 py-3.5 hover:shadow-md hover:border-blue-200 transition-all">
@@ -21,13 +30,10 @@ export default function TaskCard({ task, subtasks, onClick, onToggleSubtask }) {
         {task.description && (
           <p className="text-slate-500 text-xs mt-1 line-clamp-2">{task.description}</p>
         )}
-        {task.deadline && (
-          <span
-            className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium ${
-              isOverdue ? 'bg-red-100 text-red-600' : 'bg-amber-50 text-amber-700'
-            }`}
-          >
-            {isOverdue ? '⚠ ' : ''}Дедлайн: {formatDeadline(task.deadline)}
+        {task.deadline && dlColors && (
+          <span className={`inline-flex items-center gap-1.5 mt-2 text-xs px-2 py-0.5 rounded-full font-medium ${dlColors.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dlColors.dot}`} />
+            Дедлайн: {formatDeadline(task.deadline)}
           </span>
         )}
       </div>
@@ -57,11 +63,15 @@ export default function TaskCard({ task, subtasks, onClick, onToggleSubtask }) {
                   {(Array.isArray(subtask.assignee) ? subtask.assignee : subtask.assignee ? [subtask.assignee] : []).map((a) => (
                     <span key={a} className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">{a}</span>
                   ))}
-                  {subtask.deadline && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${new Date(subtask.deadline) < new Date() && !subtask.is_done ? 'bg-red-100 text-red-500' : 'bg-amber-50 text-amber-600'}`}>
-                      {formatDeadline(subtask.deadline)}
-                    </span>
-                  )}
+                  {subtask.deadline && (() => {
+                    const c = deadlineColors(subtask.deadline)
+                    return c ? (
+                      <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${subtask.is_done ? 'bg-slate-100 text-slate-400' : c.badge}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${subtask.is_done ? 'bg-slate-300' : c.dot}`} />
+                        {formatDeadline(subtask.deadline)}
+                      </span>
+                    ) : null
+                  })()}
                 </div>
               </div>
             </div>
