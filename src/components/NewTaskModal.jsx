@@ -129,24 +129,30 @@ export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
                 onChange={(e) => setField('deadlineDate', e.target.value)}
                 className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400 mb-2"
               />
-              <div className="flex gap-2">
-                <select
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  min="0"
+                  max="23"
+                  step="1"
                   value={form.deadlineHour}
-                  onChange={(e) => setField('deadlineHour', e.target.value)}
+                  onChange={(e) => setField('deadlineHour', String(Math.min(23, Math.max(0, Number(e.target.value)))).padStart(2, '0'))}
                   disabled={!form.deadlineDate}
-                  className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-blue-400 bg-white disabled:opacity-40"
-                >
-                  {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
-                </select>
-                <span className="flex items-center text-slate-400 font-bold">:</span>
-                <select
+                  placeholder="ЧЧ"
+                  className="w-16 text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-blue-400 text-center disabled:opacity-40"
+                />
+                <span className="text-slate-400 font-bold">:</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="10"
                   value={form.deadlineMin}
-                  onChange={(e) => setField('deadlineMin', e.target.value)}
+                  onChange={(e) => setField('deadlineMin', String(Math.min(59, Math.max(0, Number(e.target.value)))).padStart(2, '0'))}
                   disabled={!form.deadlineDate}
-                  className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-blue-400 bg-white disabled:opacity-40"
-                >
-                  {MINUTES.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
+                  placeholder="ММ"
+                  className="w-16 text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-blue-400 text-center disabled:opacity-40"
+                />
               </div>
             </div>
           </div>
