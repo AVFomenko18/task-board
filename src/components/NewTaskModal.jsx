@@ -118,6 +118,7 @@ export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
               </label>
               <input
                 type="datetime-local"
+                step="600"
                 value={form.deadline}
                 onChange={(e) => setField('deadline', e.target.value)}
                 className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400"
