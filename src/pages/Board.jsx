@@ -94,7 +94,7 @@ export default function Board() {
                   {member === 'Вагиз' && (
                     <button
                       onClick={() => setShowBroadcast(true)}
-                      className="text-xs text-violet-600 hover:text-violet-700 hover:bg-violet-50 px-2 py-1 rounded-md font-medium transition-colors"
+                      className="text-xs bg-violet-600 hover:bg-violet-700 text-white px-2.5 py-1 rounded-md font-medium transition-colors shadow-sm"
                       title="Создать задачу на всех РГ"
                     >
                       на всех
