@@ -4,12 +4,14 @@ import { TEAM_MEMBERS } from '../lib/constants'
 import TaskCard from '../components/TaskCard'
 import TaskModal from '../components/TaskModal'
 import NewTaskModal from '../components/NewTaskModal'
+import BroadcastTaskModal from '../components/BroadcastTaskModal'
 
 export default function Board() {
   const [tasks, setTasks] = useState([])
   const [subtasks, setSubtasks] = useState([])
   const [selectedTask, setSelectedTask] = useState(null)
   const [newTaskFor, setNewTaskFor] = useState(null)
+  const [showBroadcast, setShowBroadcast] = useState(false)
   const [loading, setLoading] = useState(true)
 
   async function fetchAll() {
@@ -88,13 +90,24 @@ export default function Board() {
                     {memberTasks.length}
                   </span>
                 </div>
-                <button
-                  onClick={() => setNewTaskFor(member)}
-                  className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md flex items-center justify-center text-lg transition-colors"
-                  title="Новая задача"
-                >
-                  +
-                </button>
+                <div className="flex items-center gap-1">
+                  {member === 'Вагиз' && (
+                    <button
+                      onClick={() => setShowBroadcast(true)}
+                      className="text-xs text-violet-600 hover:text-violet-700 hover:bg-violet-50 px-2 py-1 rounded-md font-medium transition-colors"
+                      title="Создать задачу на всех РГ"
+                    >
+                      на всех
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setNewTaskFor(member)}
+                    className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md flex items-center justify-center text-lg transition-colors"
+                    title="Новая задача"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -138,6 +151,13 @@ export default function Board() {
           defaultAssignee={newTaskFor}
           onClose={() => setNewTaskFor(null)}
           onCreated={() => { setNewTaskFor(null); fetchAll() }}
+        />
+      )}
+
+      {showBroadcast && (
+        <BroadcastTaskModal
+          onClose={() => setShowBroadcast(false)}
+          onCreated={() => { setShowBroadcast(false); fetchAll() }}
         />
       )}
     </>
