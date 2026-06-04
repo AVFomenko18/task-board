@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import Board from './pages/Board'
 import Stats from './pages/Stats'
+import BroadcastTaskModal from './components/BroadcastTaskModal'
 
 export default function App() {
+  const [showBroadcast, setShowBroadcast] = useState(false)
+
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-slate-100">
@@ -33,7 +37,19 @@ export default function App() {
           >
             Статистика
           </NavLink>
+          <button
+            onClick={() => setShowBroadcast(true)}
+            className="ml-2 text-sm bg-violet-600 hover:bg-violet-700 text-white font-medium px-4 py-1.5 rounded-lg transition-colors shadow-sm"
+          >
+            Создать задачу для всех
+          </button>
         </nav>
+        {showBroadcast && (
+          <BroadcastTaskModal
+            onClose={() => setShowBroadcast(false)}
+            onCreated={() => setShowBroadcast(false)}
+          />
+        )}
         <main className="px-6 py-6">
           <Routes>
             <Route path="/" element={<Board />} />

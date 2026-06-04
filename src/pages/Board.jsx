@@ -4,14 +4,12 @@ import { TEAM_MEMBERS } from '../lib/constants'
 import TaskCard from '../components/TaskCard'
 import TaskModal from '../components/TaskModal'
 import NewTaskModal from '../components/NewTaskModal'
-import BroadcastTaskModal from '../components/BroadcastTaskModal'
 
 export default function Board() {
   const [tasks, setTasks] = useState([])
   const [subtasks, setSubtasks] = useState([])
   const [selectedTask, setSelectedTask] = useState(null)
   const [newTaskFor, setNewTaskFor] = useState(null)
-  const [showBroadcast, setShowBroadcast] = useState(false)
   const [loading, setLoading] = useState(true)
 
   async function fetchAll() {
@@ -91,15 +89,6 @@ export default function Board() {
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {member === 'Вагиз' && (
-                    <button
-                      onClick={() => setShowBroadcast(true)}
-                      className="text-xs bg-violet-600 hover:bg-violet-700 text-white px-2.5 py-1 rounded-md font-medium transition-colors shadow-sm"
-                      title="Создать задачу на всех РГ"
-                    >
-                      на всех
-                    </button>
-                  )}
                   <button
                     onClick={() => setNewTaskFor(member)}
                     className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-md flex items-center justify-center text-lg transition-colors"
@@ -154,12 +143,6 @@ export default function Board() {
         />
       )}
 
-      {showBroadcast && (
-        <BroadcastTaskModal
-          onClose={() => setShowBroadcast(false)}
-          onCreated={() => { setShowBroadcast(false); fetchAll() }}
-        />
-      )}
     </>
   )
 }
