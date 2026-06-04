@@ -41,7 +41,7 @@ export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
         title: form.title.trim(),
         description: form.description.trim() || null,
         assignee: form.assignee,
-        deadline: form.deadline || null,
+        deadline: form.deadline ? new Date(form.deadline).toISOString() : null,
       })
       .select()
       .single()
