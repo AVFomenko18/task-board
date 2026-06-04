@@ -2,12 +2,17 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { TEAM_MEMBERS } from '../lib/constants'
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINUTES = ['00', '10', '20', '30', '40', '50']
+
 export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
   const [form, setForm] = useState({
     title: '',
     description: '',
     assignee: defaultAssignee || TEAM_MEMBERS[0],
-    deadline: '',
+    deadlineDate: '',
+    deadlineHour: '09',
+    deadlineMin: '00',
   })
   const [subtasks, setSubtasks] = useState([''])
   const [saving, setSaving] = useState(false)
@@ -41,7 +46,9 @@ export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
         title: form.title.trim(),
         description: form.description.trim() || null,
         assignee: form.assignee,
-        deadline: form.deadline ? new Date(form.deadline).toISOString() : null,
+        deadline: form.deadlineDate
+          ? new Date(`${form.deadlineDate}T${form.deadlineHour}:${form.deadlineMin}:00`).toISOString()
+          : null,
       })
       .select()
       .single()
@@ -117,12 +124,30 @@ export default function NewTaskModal({ defaultAssignee, onClose, onCreated }) {
                 Дедлайн
               </label>
               <input
-                type="datetime-local"
-                step="600"
-                value={form.deadline}
-                onChange={(e) => setField('deadline', e.target.value)}
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400"
+                type="date"
+                value={form.deadlineDate}
+                onChange={(e) => setField('deadlineDate', e.target.value)}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400 mb-2"
               />
+              <div className="flex gap-2">
+                <select
+                  value={form.deadlineHour}
+                  onChange={(e) => setField('deadlineHour', e.target.value)}
+                  disabled={!form.deadlineDate}
+                  className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-blue-400 bg-white disabled:opacity-40"
+                >
+                  {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <span className="flex items-center text-slate-400 font-bold">:</span>
+                <select
+                  value={form.deadlineMin}
+                  onChange={(e) => setField('deadlineMin', e.target.value)}
+                  disabled={!form.deadlineDate}
+                  className="flex-1 text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-blue-400 bg-white disabled:opacity-40"
+                >
+                  {MINUTES.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
             </div>
           </div>
 
