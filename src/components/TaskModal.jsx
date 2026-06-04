@@ -1,27 +1,51 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { TEAM_MEMBERS } from '../lib/constants'
+
+function formatDeadline(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  const date = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  const h = d.getHours(), m = d.getMinutes()
+  return (h || m) ? `${date}, ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` : date
+}
+
+const emptyNew = { title: '', assignee: '', deadlineDate: '', deadlineHour: '09', deadlineMin: '00' }
 
 export default function TaskModal({ task, subtasks, onClose, onToggleSubtask, onComplete, onDelete, onRefresh }) {
-  const [newSubtask, setNewSubtask] = useState('')
-  const [addingSubtask, setAddingSubtask] = useState(false)
+  const [newSub, setNewSub] = useState(emptyNew)
+  const [adding, setAdding] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
 
   const done = subtasks.filter((s) => s.is_done).length
   const total = subtasks.length
+  const isOverdue = task.deadline && new Date(task.deadline) < new Date()
 
-  function formatDate(dateStr) {
+  function formatTaskDate(dateStr) {
     if (!dateStr) return '—'
     return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
   }
 
-  const isOverdue = task.deadline && new Date(task.deadline) < new Date()
+  function setNewField(field, value) {
+    setNewSub((s) => ({ ...s, [field]: value }))
+  }
 
   async function handleAddSubtask(e) {
     e.preventDefault()
-    if (!newSubtask.trim()) return
-    setAddingSubtask(true)
-    await supabase.from('subtasks').insert({ task_id: task.id, title: newSubtask.trim() })
-    setNewSubtask('')
-    setAddingSubtask(false)
+    if (!newSub.title.trim()) return
+    setAdding(true)
+    const deadline = newSub.deadlineDate
+      ? new Date(`${newSub.deadlineDate}T${newSub.deadlineHour}:${newSub.deadlineMin}:00`).toISOString()
+      : null
+    await supabase.from('subtasks').insert({
+      task_id: task.id,
+      title: newSub.title.trim(),
+      assignee: newSub.assignee || null,
+      deadline,
+    })
+    setNewSub(emptyNew)
+    setAdding(false)
+    setShowAddForm(false)
     onRefresh()
   }
 
@@ -39,24 +63,12 @@ export default function TaskModal({ task, subtasks, onClose, onToggleSubtask, on
         <div className="px-6 py-5 border-b border-slate-100">
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-bold text-slate-800 text-xl leading-tight">{task.title}</h2>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 text-xl leading-none shrink-0 mt-0.5"
-            >
-              ✕
-            </button>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none shrink-0 mt-0.5">✕</button>
           </div>
-
           <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-sm bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full font-medium">
-              👤 {task.assignee}
-            </span>
-            <span
-              className={`text-sm px-2.5 py-1 rounded-full font-medium ${
-                isOverdue ? 'bg-red-100 text-red-600' : 'bg-amber-50 text-amber-700'
-              }`}
-            >
-              📅 {formatDate(task.deadline)}
+            <span className="text-sm bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full font-medium">👤 {task.assignee}</span>
+            <span className={`text-sm px-2.5 py-1 rounded-full font-medium ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-amber-50 text-amber-700'}`}>
+              📅 {formatTaskDate(task.deadline)}
             </span>
           </div>
         </div>
@@ -70,25 +82,19 @@ export default function TaskModal({ task, subtasks, onClose, onToggleSubtask, on
           )}
 
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                Подзадачи {total > 0 ? `(${done}/${total})` : ''}
-              </h3>
-            </div>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+              Подзадачи {total > 0 ? `(${done}/${total})` : ''}
+            </h3>
 
-            {subtasks.length === 0 && (
-              <p className="text-slate-400 text-sm">Нет подзадач</p>
-            )}
+            {subtasks.length === 0 && <p className="text-slate-400 text-sm">Нет подзадач</p>}
 
             <div className="space-y-2">
               {subtasks.map((subtask) => (
-                <div key={subtask.id} className="flex items-center gap-3 group">
+                <div key={subtask.id} className="flex items-start gap-3 group">
                   <button
                     onClick={() => onToggleSubtask(subtask)}
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      subtask.is_done
-                        ? 'bg-green-500 border-green-500 text-white'
-                        : 'border-slate-300 hover:border-blue-400'
+                    className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      subtask.is_done ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-blue-400'
                     }`}
                   >
                     {subtask.is_done && (
@@ -97,12 +103,24 @@ export default function TaskModal({ task, subtasks, onClose, onToggleSubtask, on
                       </svg>
                     )}
                   </button>
-                  <span className={`text-sm flex-1 ${subtask.is_done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
-                    {subtask.title}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-sm ${subtask.is_done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                      {subtask.title}
+                    </span>
+                    <div className="flex gap-1.5 mt-1 flex-wrap">
+                      {subtask.assignee && (
+                        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">👤 {subtask.assignee}</span>
+                      )}
+                      {subtask.deadline && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${new Date(subtask.deadline) < new Date() && !subtask.is_done ? 'bg-red-100 text-red-500' : 'bg-amber-50 text-amber-600'}`}>
+                          📅 {formatDeadline(subtask.deadline)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <button
                     onClick={() => handleDeleteSubtask(subtask.id)}
-                    className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all text-xs"
+                    className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all text-xs mt-1"
                   >
                     ✕
                   </button>
@@ -110,36 +128,74 @@ export default function TaskModal({ task, subtasks, onClose, onToggleSubtask, on
               ))}
             </div>
 
-            <form onSubmit={handleAddSubtask} className="flex gap-2 mt-3">
-              <input
-                type="text"
-                value={newSubtask}
-                onChange={(e) => setNewSubtask(e.target.value)}
-                placeholder="Добавить подзадачу..."
-                className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
-              />
+            {!showAddForm ? (
               <button
-                type="submit"
-                disabled={addingSubtask || !newSubtask.trim()}
-                className="text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-colors disabled:opacity-40"
+                onClick={() => setShowAddForm(true)}
+                className="mt-3 text-sm text-blue-500 hover:text-blue-700 font-medium"
               >
-                +
+                + Добавить подзадачу
               </button>
-            </form>
+            ) : (
+              <form onSubmit={handleAddSubtask} className="mt-3 border border-slate-200 rounded-xl p-3 space-y-2">
+                <input
+                  type="text" value={newSub.title}
+                  onChange={(e) => setNewField('title', e.target.value)}
+                  placeholder="Название подзадачи..."
+                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
+                  autoFocus
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Ответственный</label>
+                    <select
+                      value={newSub.assignee}
+                      onChange={(e) => setNewField('assignee', e.target.value)}
+                      className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400"
+                    >
+                      <option value="">— не выбран</option>
+                      {TEAM_MEMBERS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Дедлайн</label>
+                    <input
+                      type="date" value={newSub.deadlineDate}
+                      onChange={(e) => setNewField('deadlineDate', e.target.value)}
+                      className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
+                    />
+                    <div className="flex gap-1 items-center mt-1">
+                      <input type="number" min="0" max="23" step="1"
+                        value={newSub.deadlineHour}
+                        onChange={(e) => setNewField('deadlineHour', String(Math.min(23,Math.max(0,Number(e.target.value)))).padStart(2,'0'))}
+                        disabled={!newSub.deadlineDate}
+                        className="w-12 text-xs border border-slate-200 rounded-lg px-1 py-1.5 text-center focus:outline-none focus:border-blue-400 disabled:opacity-40"
+                      />
+                      <span className="text-slate-400 text-xs">:</span>
+                      <input type="number" min="0" max="59" step="10"
+                        value={newSub.deadlineMin}
+                        onChange={(e) => setNewField('deadlineMin', String(Math.min(59,Math.max(0,Number(e.target.value)))).padStart(2,'0'))}
+                        disabled={!newSub.deadlineDate}
+                        className="w-12 text-xs border border-slate-200 rounded-lg px-1 py-1.5 text-center focus:outline-none focus:border-blue-400 disabled:opacity-40"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setShowAddForm(false)} className="text-xs text-slate-500 hover:text-slate-700">Отмена</button>
+                  <button type="submit" disabled={adding || !newSub.title.trim()} className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg disabled:opacity-40">
+                    Добавить
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-3 justify-between">
-          <button
-            onClick={() => onDelete(task)}
-            className="text-sm text-red-500 hover:text-red-600 font-medium transition-colors"
-          >
+          <button onClick={() => onDelete(task)} className="text-sm text-red-500 hover:text-red-600 font-medium transition-colors">
             Удалить задачу
           </button>
-          <button
-            onClick={() => onComplete(task)}
-            className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-          >
+          <button onClick={() => onComplete(task)} className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
             Отметить выполненной
           </button>
         </div>

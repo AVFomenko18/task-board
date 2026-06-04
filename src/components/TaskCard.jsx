@@ -37,25 +37,33 @@ export default function TaskCard({ task, subtasks, onClick, onToggleSubtask }) {
           {subtasks.map((subtask) => (
             <div
               key={subtask.id}
-              className="flex items-center gap-2.5 cursor-pointer"
+              className="flex items-start gap-2.5 cursor-pointer"
               onClick={(e) => { e.stopPropagation(); onToggleSubtask(subtask) }}
             >
-              <div
-                className={`w-[16px] h-[16px] rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                  subtask.is_done
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'border-slate-300 hover:border-blue-400'
-                }`}
-              >
+              <div className={`mt-0.5 w-[16px] h-[16px] rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                subtask.is_done ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-blue-400'
+              }`}>
                 {subtask.is_done && (
                   <svg className="w-2 h-2" viewBox="0 0 12 12" fill="none">
                     <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
               </div>
-              <span className={`text-xs ${subtask.is_done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
-                {subtask.title}
-              </span>
+              <div className="flex-1 min-w-0">
+                <span className={`text-xs ${subtask.is_done ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                  {subtask.title}
+                </span>
+                <div className="flex gap-1.5 mt-0.5 flex-wrap">
+                  {subtask.assignee && (
+                    <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">{subtask.assignee}</span>
+                  )}
+                  {subtask.deadline && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${new Date(subtask.deadline) < new Date() && !subtask.is_done ? 'bg-red-100 text-red-500' : 'bg-amber-50 text-amber-600'}`}>
+                      {formatDeadline(subtask.deadline)}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           ))}
           <div className="w-full bg-slate-100 rounded-full h-1 mt-1">
