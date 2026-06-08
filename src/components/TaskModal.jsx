@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AssigneePicker from './AssigneePicker'
+import { TEAM_MEMBERS } from '../lib/constants'
 
 function formatDeadline(dateStr) {
   if (!dateStr) return null
@@ -102,19 +103,58 @@ function SubtaskEditForm({ subtask, onSave, onCancel }) {
 
 const emptyNew = { title: '', assignees: [], deadlineDate: '', deadlineHour: '09', deadlineMin: '00' }
 
+function initEditForm(task) {
+  const d = task.deadline ? new Date(task.deadline) : null
+  return {
+    title: task.title,
+    description: task.description || '',
+    assignee: task.assignee,
+    deadlineDate: d ? d.toLocaleDateString('en-CA') : '',
+    deadlineHour: d ? String(d.getHours()).padStart(2, '0') : '09',
+    deadlineMin: d ? String(Math.round(d.getMinutes() / 10) * 10).padStart(2, '0') : '00',
+  }
+}
+
 export default function TaskModal({ task, subtasks, onClose, onToggleSubtask, onComplete, onDelete, onRefresh }) {
   const [newSub, setNewSub] = useState(emptyNew)
   const [adding, setAdding] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [editingTask, setEditingTask] = useState(false)
+  const [editForm, setEditForm] = useState(() => initEditForm(task))
+  const [savingTask, setSavingTask] = useState(false)
 
   const done = subtasks.filter((s) => s.is_done).length
   const total = subtasks.length
-  const isOverdue = task.deadline && new Date(task.deadline) < new Date()
+  const dlColors = deadlineColors(task.deadline)
 
   function formatTaskDate(dateStr) {
     if (!dateStr) return '—'
-    return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    const d = new Date(dateStr)
+    const date = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    const h = d.getHours(), m = d.getMinutes()
+    return (h || m) ? `${date}, ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` : date
+  }
+
+  function setEditField(field, value) {
+    setEditForm((f) => ({ ...f, [field]: value }))
+  }
+
+  async function handleSaveTask() {
+    if (!editForm.title.trim()) return
+    setSavingTask(true)
+    const deadline = editForm.deadlineDate
+      ? new Date(`${editForm.deadlineDate}T${editForm.deadlineHour}:${editForm.deadlineMin}:00`).toISOString()
+      : null
+    await supabase.from('tasks').update({
+      title: editForm.title.trim(),
+      description: editForm.description.trim() || null,
+      assignee: editForm.assignee,
+      deadline,
+    }).eq('id', task.id)
+    setSavingTask(false)
+    setEditingTask(false)
+    onRefresh()
   }
 
   function setNewField(field, value) {
@@ -157,16 +197,89 @@ export default function TaskModal({ task, subtasks, onClose, onToggleSubtask, on
     >
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-5 border-b border-slate-100">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="font-bold text-slate-800 text-xl leading-tight">{task.title}</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none shrink-0 mt-0.5">✕</button>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-sm bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full font-medium">👤 {task.assignee}</span>
-            <span className={`text-sm px-2.5 py-1 rounded-full font-medium ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-amber-50 text-amber-700'}`}>
-              📅 {formatTaskDate(task.deadline)}
-            </span>
-          </div>
+          {editingTask ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Редактирование</span>
+                <button onClick={() => setEditingTask(false)} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+              </div>
+              <input
+                type="text" value={editForm.title}
+                onChange={(e) => setEditField('title', e.target.value)}
+                className="w-full text-base font-bold border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
+              />
+              <textarea
+                value={editForm.description}
+                onChange={(e) => setEditField('description', e.target.value)}
+                placeholder="Описание..."
+                rows={2}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 resize-none"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Ответственный</label>
+                  <select
+                    value={editForm.assignee}
+                    onChange={(e) => setEditField('assignee', e.target.value)}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-2 py-2 bg-white focus:outline-none focus:border-blue-400"
+                  >
+                    {TEAM_MEMBERS.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Дедлайн</label>
+                  <input
+                    type="date" value={editForm.deadlineDate}
+                    onChange={(e) => setEditField('deadlineDate', e.target.value)}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-blue-400"
+                  />
+                  <TimeInputs
+                    hour={editForm.deadlineHour} min={editForm.deadlineMin}
+                    onHour={(v) => setEditField('deadlineHour', v)}
+                    onMin={(v) => setEditField('deadlineMin', v)}
+                    disabled={!editForm.deadlineDate}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setEditingTask(false)} className="text-sm text-slate-500 hover:text-slate-700">Отмена</button>
+                <button
+                  onClick={handleSaveTask}
+                  disabled={savingTask || !editForm.title.trim()}
+                  className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg disabled:opacity-40"
+                >
+                  {savingTask ? 'Сохранение...' : 'Сохранить'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="font-bold text-slate-800 text-xl leading-tight">{task.title}</h2>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => { setEditForm(initEditForm(task)); setEditingTask(true) }}
+                    className="text-slate-400 hover:text-blue-500 text-sm px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                    title="Редактировать"
+                  >
+                    ✏️ Изменить
+                  </button>
+                  <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none mt-0.5">✕</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="text-sm bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full font-medium">👤 {task.assignee}</span>
+                {task.deadline && dlColors ? (
+                  <span className={`inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full font-medium ${dlColors.badge}`}>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${dlColors.dot}`} />
+                    {formatTaskDate(task.deadline)}
+                  </span>
+                ) : (
+                  <span className="text-sm bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">Без дедлайна</span>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="px-6 py-5 space-y-5">
