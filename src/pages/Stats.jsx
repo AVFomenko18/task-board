@@ -31,6 +31,11 @@ export default function Stats() {
     setDoneTasks((prev) => prev.filter((t) => t.id !== taskId))
   }
 
+  async function handleRestore(taskId) {
+    await supabase.from('tasks').update({ status: 'active', completed_at: null }).eq('id', taskId)
+    setDoneTasks((prev) => prev.filter((t) => t.id !== taskId))
+  }
+
   useEffect(() => {
     async function fetchDone() {
       const { data: tasks } = await supabase
@@ -176,6 +181,13 @@ export default function Stats() {
                           {isOpen ? '▲' : '▼'} {subs.filter(s => s.is_done).length}/{subs.length}
                         </button>
                       )}
+                      <button
+                        onClick={() => handleRestore(task.id)}
+                        className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                        title="Вернуть в активные"
+                      >
+                        Вернуть
+                      </button>
                       <button
                         onClick={() => handleDelete(task.id)}
                         className="text-red-400 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
